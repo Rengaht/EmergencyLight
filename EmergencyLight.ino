@@ -1,44 +1,27 @@
-#define USE_ATTINY
-
 #include <CapacitiveSensor.h>
 
-#ifdef USE_ATTINY
+#define TOUCH_THRES 50
+#define PROX_LOW_THRES 10
+#define PROX_HIGH_THRES 200
+#define SENSE_INTERVAL 30
+
+
+#define BLINK_VEL 20
+#define BREATH_VEL 1000
+
 
 #define PIN_R 6
 #define PIN_G 7
 #define PIN_B 8
 
 #define PIN_BASE 2
-#define PIN_HUE 3
+#define PIN_MODE 3
 #define PIN_BRIGHT 4
-#define PIN_MODE 5
-#define PIN_PROX 9
+#define PIN_HUE 5
 
-#else
-
-#define PIN_R 9
-#define PIN_G 10
-#define PIN_B 11
-
-#define PIN_BASE 3
-#define PIN_HUE 4
-#define PIN_BRIGHT 5
-#define PIN_MODE 6
-#define PIN_PROX 7
-
-#endif
-
-
-//#define PIN_THRES 1
-
-#define TOUCH_THRES 200
-#define PROX_LOW_THRES 20
-#define PROX_HIGH_THRES 500
 
 #define MMODE 3
 
-#define BLINK_VEL 200
-#define BREATH_VEL 1000
 
 int PIN_THRES=A1;
 
@@ -54,6 +37,7 @@ int _vthres;
 int a=0;
 
 void changeMode(){
+  
 
   _mode=(_mode+1)%MMODE;
 }
@@ -109,68 +93,33 @@ void setup(){
   _cap_bright.set_CS_AutocaL_Millis(0xFFFFFFFF);
   _cap_mode.set_CS_AutocaL_Millis(0xFFFFFFFF);
   _cap_prox.set_CS_AutocaL_Millis(0xFFFFFFFF);
-#ifndef USE_ATTINY 
-  Serial.begin(9600); 
-#endif
+
 }
 
 void loop(){
   
-//  float newthres_=map(analogRead(PIN_THRES),0,1023,100,2000);
   
-//  if(abs(newthres_-_vthres)>10){
-//    _vthres=newthres_;
-//#ifndef USE_ATTINY 
-//    Serial.print("thres_= ");
-//    Serial.println(_vthres);
-//#endif
-//  }
-
-//  _vhue=map(newthres_,0,360,100,2000);
+  long thue_=_cap_hue.capacitiveSensor(SENSE_INTERVAL);
+  long tbright_=_cap_bright.capacitiveSensor(SENSE_INTERVAL);
+  long tmode_=_cap_mode.capacitiveSensor(SENSE_INTERVAL);
+  long tprox_=_cap_prox.capacitiveSensor(SENSE_INTERVAL);
   
-
-  
-  long thue_=_cap_hue.capacitiveSensor(30);
-  long tbright_=_cap_bright.capacitiveSensor(30);
-  long tmode_=_cap_mode.capacitiveSensor(30);
-//
-  long tprox_=_cap_prox.capacitiveSensor(30);
-//
-//  
-    if(tmode_>TOUCH_THRES){
-      changeMode();
-#ifndef USE_ATTINY 
-    Serial.print("change mode=");
-    Serial.println(_mode);
-#endif    
+  if(thue_>TOUCH_THRES){    
+   
+    if(tprox_>=PROX_LOW_THRES && tprox_<=PROX_HIGH_THRES)
+      _vhue=constrain(map(tprox_,PROX_LOW_THRES,PROX_HIGH_THRES,0,360),0,360);              
+   
+  }else if(tbright_>TOUCH_THRES){                
     
-   }else if(tprox_>=PROX_LOW_THRES && tprox_<=PROX_HIGH_THRES){
-     if(thue_>TOUCH_THRES){
-        _vhue=constrain(map(tprox_,PROX_LOW_THRES,PROX_HIGH_THRES,0,360),0,360);        
-     }else if(tbright_>TOUCH_THRES){             
-        _vbright=constrain(map(tprox_,PROX_LOW_THRES,PROX_HIGH_THRES,0,255),0,255);     
-     }
-   }
-//     if(thue_>TOUCH_THRES){
-//       
-//        _vhue=constrain(map(tprox_,_vthres,PROX_HIGH_THRES,0,360),0,360);        
-//
-//#ifndef USE_ATTINY 
-//        Serial.print("hue= ");
-//        Serial.println(_vhue);
-//#endif
-//
-//     }else if(tbright_>TOUCH_THRES){
-//             
-//        _vbright=constrain(map(tprox_,_vthres,PROX_HIGH_THRES,0,255),0,255);     
-//
-//#ifndef USE_ATTINY 
-//        Serial.print("bright= ");
-//        Serial.println(_vbright);
-//#endif
-//     }
-//  }
-  
+    if(tprox_>=PROX_LOW_THRES && tprox_<=PROX_HIGH_THRES)
+      _vbright=constrain(map(tprox_,PROX_LOW_THRES,PROX_HIGH_THRES,255,0),0,255);           
+   
+  }else if(tmode_>TOUCH_THRES){
+       
+      changeMode();
+   
+  }
+
   int r,g,b;
   hueToColor(_vhue,_vbright,r,g,b);
   float t=1;
@@ -182,17 +131,13 @@ void loop(){
       t=sin((float)(millis()%BREATH_VEL)/BREATH_VEL*PI);
       break;  
   }
+  
   analogWrite(PIN_R,(float)r*t);
   analogWrite(PIN_G,(float)g*t);
   analogWrite(PIN_B,(float)b*t);
+  
+  delay(2);
 
-//  a=(a+2)%255;
-//  
-//  analogWrite(PIN_R,a);
-//  analogWrite(PIN_G,a);
-//  analogWrite(PIN_B,a);
-//  
-  delay(5);
 }
 
 
